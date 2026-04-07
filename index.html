@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seteg - Solicitação de Peças Gráficas</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    
+    <div class="bg-pattern"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="logo-area">
+                <img src="images/logo-branco.png" alt="Seteg" class="logo-img" id="headerLogo">
+                <div>
+                    <h1>Sistema de Solicitação de Peças Gráficas</h1>
+                    <span class="subtitle">Gestão das Peças Gráficas</span>
+                </div>
+            </div>
+            <div class="header-actions" id="headerActions">
+                <button class="btn btn-primary" onclick="abrirModalLogin()">
+                    <i class="fas fa-lock"></i> Acesso Gestor
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="main-grid">
+            
+            <!-- COLUNA ESQUERDA -->
+            <div class="content-column">
+                
+                <!-- FORMULÁRIO -->
+                <section class="card" id="formSection">
+                    <div class="card-header" onclick="toggleFormulario()">
+                        <h2><i class="fas fa-pen-fancy"></i> Nova Solicitação de Peça Gráfica</h2>
+                        <button type="button" class="btn btn-primary btn-sm" id="toggleBtn">
+                            <i class="fas fa-chevron-down" id="toggleIcon"></i> 
+                            <span id="toggleText">Recolher Formulário</span>
+                        </button>
+                    </div>
+                    
+                    <div class="card-content expanded" id="formContent">
+                        
+                        <div class="alert-success hidden" id="successMessage">
+                            <i class="fas fa-check-circle"></i>
+                            <div>
+                                <strong>Solicitação enviada com sucesso!</strong><br>
+                                Protocolo: <span id="protocolNumber"></span>
+                            </div>
+                        </div>
+
+                        <form id="requestForm" onsubmit="salvarSolicitacao(event)">
+                            
+                            <!-- 1. SOLICITANTE -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-user"></i>
+                                    <h3>1. Informações do Solicitante</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="form-row">
+                                        <div class="input-group">
+                                            <label>Nome do Solicitante <span class="req">*</span></label>
+                                            <input type="text" name="solicitante_nome" required placeholder="Nome completo">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Setor / Área <span class="req">*</span></label>
+                                            <input type="text" name="solicitante_setor" required placeholder="Ex: Marketing, RH">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>E-mail <span class="req">*</span></label>
+                                            <input type="email" name="solicitante_email" required placeholder="email@empresa.com">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Código do Projeto | Cliente</label>
+                                            <input type="text" name="solicitante_cliente" placeholder="Digite o projeto ou cliente">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. PRAZO -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <h3>2. Prazo</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="form-row">
+                                        <div class="input-group">
+                                            <label>Data Ideal de Entrega <span class="req">*</span></label>
+                                            <input type="date" name="prazo_ideal" required>
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Data Limite <span class="req">*</span></label>
+                                            <input type="date" name="prazo_limite" required>
+                                        </div>
+                                        <div class="input-group full-width">
+                                            <label>Este material é urgente? <span class="req">*</span></label>
+                                            <div class="radio-group">
+                                                <label class="radio-btn">
+                                                    <input type="radio" name="urgente" value="sim" onchange="toggleField('urgencyField', true)">
+                                                    <span>Sim</span>
+                                                </label>
+                                                <label class="radio-btn">
+                                                    <input type="radio" name="urgente" value="nao" checked onchange="toggleField('urgencyField', false)">
+                                                    <span>Não</span>
+                                                </label>
+                                            </div>
+                                            <div class="conditional hidden" id="urgencyField">
+                                                <label>Justificativa da Urgência <span class="req">*</span></label>
+                                                <textarea name="urgencia_justificativa" rows="3" placeholder="Explique o motivo da urgência..."></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. TIPO DE MATERIAL -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-shapes"></i>
+                                    <h3>3. Tipo de Material</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="form-row">
+                                        <div class="input-group full-width">
+                                            <label>Selecione o tipo <span class="req">*</span></label>
+                                            <select name="tipo_material" id="tipoMaterial" required onchange="toggleField('outroTipoField', this.value === 'outro')">
+                                                <option value="">Selecione...</option>
+                                                <option value="comunicado">Comunicado Interno</option>
+                                                <option value="post">Post para Redes Sociais</option>
+                                                <option value="story">Story</option>
+                                                <option value="banner">Banner</option>
+                                                <option value="cartaz">Cartaz</option>
+                                                <option value="apresentacao">Apresentação</option>
+                                                <option value="cartilha">Cartilha</option>
+                                                <option value="convite">Convite</option>
+                                                <option value="wallpaper">Wallpaper</option>
+                                                <option value="outro">Outro</option>
+                                            </select>
+                                        </div>
+                                        <div class="input-group full-width conditional hidden" id="outroTipoField">
+                                            <label>Qual tipo? <span class="req">*</span></label>
+                                            <input type="text" name="tipo_material_outro" placeholder="Descreva o tipo de material...">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. OBJETIVO -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-bullseye"></i>
+                                    <h3>4. Objetivo</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Qual o objetivo da peça? <span class="req">*</span></label>
+                                        <textarea name="objetivo" required rows="3" placeholder="Ex: divulgar evento interno, comunicar mudança..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 5. CONTEÚDO -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-file-word"></i>
+                                    <h3>5. Conteúdo</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Texto/Conteúdo da peça <span class="req">*</span></label>
+                                        <textarea name="conteudo" required rows="5" placeholder="Cole o texto completo que será usado na peça..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 6. INFORMAÇÕES OBRIGATÓRIAS -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <h3>6. Informações Obrigatórias</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Elementos obrigatórios <span class="req">*</span></label>
+                                        <textarea name="info_obrigatorias" required rows="3" placeholder="Logos, datas, hashtags, links obrigatórios..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 7. FORMATO -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-expand"></i>
+                                    <h3>7. Formato</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Canais de divulgação <span class="req">*</span></label>
+                                        <div class="checkbox-group">
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="instagram">
+                                                <i class="fab fa-instagram"></i>
+                                                <span>Instagram</span>
+                                            </label>
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="whatsapp">
+                                                <i class="fab fa-whatsapp"></i>
+                                                <span>WhatsApp</span>
+                                            </label>
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="email">
+                                                <i class="fas fa-envelope"></i>
+                                                <span>E-mail</span>
+                                            </label>
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="impressao">
+                                                <i class="fas fa-print"></i>
+                                                <span>Impressão</span>
+                                            </label>
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="site">
+                                                <i class="fas fa-globe"></i>
+                                                <span>Site</span>
+                                            </label>
+                                            <label class="check-btn">
+                                                <input type="checkbox" name="formato[]" value="outros" onchange="toggleField('outrosFormatoField', this.checked)">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                                <span>Outros</span>
+                                            </label>
+                                        </div>
+                                        <div class="conditional hidden" id="outrosFormatoField">
+                                            <label>Especifique o formato <span class="req">*</span></label>
+                                            <input type="text" name="formato_outros" placeholder="Ex: TikTok, LinkedIn, YouTube, etc.">
+                                        </div>
+                                    </div>
+                                    <div class="form-row" style="margin-top: 16px;">
+                                        <div class="input-group">
+                                            <label>Dimensões</label>
+                                            <input type="text" name="dimensoes" placeholder="Ex: A4, 1080x1080px">
+                                        </div>
+                                        <div class="input-group">
+                                            <label>Páginas</label>
+                                            <input type="number" name="paginas" min="1" placeholder="Quantidade">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 8. IDENTIDADE VISUAL -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-palette"></i>
+                                    <h3>8. Identidade Visual</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Possui identidade visual? <span class="req">*</span></label>
+                                        <div class="radio-group">
+                                            <label class="radio-btn">
+                                                <input type="radio" name="identidade_visual" value="sim" onchange="toggleField('identityField', true)">
+                                                <span>Sim</span>
+                                            </label>
+                                            <label class="radio-btn">
+                                                <input type="radio" name="identidade_visual" value="nao" checked onchange="toggleField('identityField', false)">
+                                                <span>Não</span>
+                                            </label>
+                                        </div>
+                                        <div class="conditional hidden" id="identityField">
+                                            <label>Diretório/Link da Identidade</label>
+                                            <input type="text" name="identidade_diretorio" placeholder="Ex: \\servidor\arquivos\ ou link">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 9. REFERÊNCIAS -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-images"></i>
+                                    <h3>9. Referências</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Diretório das Referências</label>
+                                        <input type="text" name="referencias_diretorio" placeholder="Ex: \\servidor\referencias\ ou link">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 10. MATERIAIS -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-folder-open"></i>
+                                    <h3>10. Materiais</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Diretório dos Materiais</label>
+                                        <input type="text" name="materiais_diretorio" placeholder="Ex: \\servidor\materiais\ ou link">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 11. OBSERVAÇÕES -->
+                            <div class="form-block">
+                                <div class="form-block-header">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <h3>11. Observações</h3>
+                                </div>
+                                <div class="form-block-body">
+                                    <div class="input-group">
+                                        <label>Observações finais</label>
+                                        <textarea name="observacoes" rows="4" placeholder="Informações adicionais, instruções especiais..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- AÇÕES -->
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-outline" onclick="limparFormulario()">
+                                    <i class="fas fa-eraser"></i> Limpar
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="btnSubmit">
+                                    <i class="fas fa-paper-plane"></i> Salvar Solicitação
+                                </button>
+                            </div>
+
+                        </form>
+                    </div>
+                </section>
+
+                <!-- TABELA COM PAGINAÇÃO -->
+                <section class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h2><i class="fas fa-list"></i> Todas as Solicitações</h2>
+                        <div class="filters" id="tableFilters">
+                            <button class="filter-btn active" onclick="filtrar('todos', this)">Todas</button>
+                            <button class="filter-btn" onclick="filtrar('na_fila', this)">Na Fila</button>
+                            <button class="filter-btn" onclick="filtrar('em_andamento', this)">Processando</button>
+                            <button class="filter-btn" onclick="filtrar('ajustes', this)">Aguardando Dados</button>
+                            <button class="filter-btn" onclick="filtrar('concluido', this)">Finalizado</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        
+                        <!-- ✅ OVERLAY DE EMPTY STATE (NOVO) -->
+                        <div id="emptyStateOverlay" class="empty-overlay" style="display: none;">
+                            <div style="text-align: center; padding: 20px;">
+                                <div style="
+                                    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+                                    width: 100px;
+                                    height: 100px;
+                                    border-radius: 50%;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    margin: 0 auto 20px;
+                                    box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4);
+                                ">
+                                    <i class="fas fa-inbox" style="font-size: 3rem; color: white;"></i>
+                                </div>
+                                <h3 style="color: var(--text-primary); font-size: 1.5rem; margin-bottom: 10px;">
+                                    Nenhuma solicitação encontrada
+                                </h3>
+                                <p style="color: var(--text-secondary); font-size: 1rem; max-width: 400px; margin: 0 auto;">
+                                    Não há solicitações neste filtro. Tente selecionar outra opção ou crie uma nova solicitação.
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- TABELA ORIGINAL (INALTERADA) -->
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th width="90">ID</th>
+                                    <th>Solicitante</th>
+                                    <th>Setor</th>
+                                    <th>Tipo</th>
+                                    <th>Formato</th>
+                                    <th>Prazo</th>
+                                    <th width="130" class="center">Status</th>
+                                    <th width="100" class="center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Dados inseridos via JS -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- PAGINAÇÃO -->
+                        <div class="pagination-container" id="paginationContainer" style="display: none;">
+                            <div class="pagination-info">
+                                <span id="paginationInfo">1-10 de 0</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button class="pagination-btn" id="btnFirst" onclick="mudarPagina(1)" title="Primeira">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </button>
+                                <button class="pagination-btn" id="btnPrev" onclick="mudarPagina(paginaAtual - 1)" title="Anterior">
+                                    <i class="fas fa-angle-left"></i>
+                                </button>
+                                
+                                <div class="pagination-numbers" id="paginationNumbers">
+                                    <!-- Números gerados via JS -->
+                                </div>
+                                
+                                <button class="pagination-btn" id="btnNext" onclick="mudarPagina(paginaAtual + 1)" title="Próxima">
+                                    <i class="fas fa-angle-right"></i>
+                                </button>
+                                <button class="pagination-btn" id="btnLast" onclick="mudarPagina(totalPaginas)" title="Última">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </button>
+                            </div>
+                            <div class="pagination-per-page">
+                                <label>Por página:</label>
+                                <select id="itemsPerPage" onchange="mudarItensPorPagina(this.value)">
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- COLUNA DIREITA: MÉTRICAS -->
+            <aside class="metrics-column">
+                <div class="metric-card">
+                    <span class="label">Total</span>
+                    <strong class="value" id="metricTotal">0</strong>
+                </div>
+                <div class="metric-card pending">
+                    <span class="label">Na Fila</span>
+                    <strong class="value" id="metricFila">0</strong>
+                </div>
+                <div class="metric-card processing">
+                    <span class="label">Processando</span>
+                    <strong class="value" id="metricProc">0</strong>
+                </div>
+                <div class="metric-card done">
+                    <span class="label">Finalizado</span>
+                    <strong class="value" id="metricDone">0</strong>
+                </div>
+                
+                <div class="legend-box">
+                    <h4><i class="fas fa-info-circle"></i> Legenda</h4>
+                    <div class="legend-item"><span class="dot na-fila"></span> Na Fila</div>
+                    <div class="legend-item"><span class="dot processando"></span> Processando</div>
+                    <div class="legend-item"><span class="dot ajustes"></span> Pendência</div>
+                    <div class="legend-item"><span class="dot concluido"></span> Concluído</div>
+                </div>
+            </aside>
+
+        </main>
+    </div>
+
+    <!-- MODAL LOGIN -->
+    <div class="modal-overlay" id="modalLoginOverlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><i class="fas fa-shield-alt"></i> Acesso Gestor</h3>
+                <button class="close-btn" onclick="fecharModalLogin()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Digite o código de segurança interno:</p>
+                <div class="input-icon-wrapper">
+                    <input type="password" id="codigoAcesso" placeholder="••••••••" onkeypress="if(event.key==='Enter') logar()">
+                    <i class="fas fa-eye" id="toggleEye" onclick="toggleEye()"></i>
+                </div>
+                <p class="error-msg hidden" id="loginErro">Código incorreto ou expirado.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="fecharModalLogin()">Cancelar</button>
+                <button class="btn btn-primary" id="btnLogin" onclick="logar()"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL VISUALIZAÇÃO -->
+    <div class="modal-overlay" id="modalViewOverlay">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye"></i> Detalhes da Solicitação</h3>
+                <button class="close-btn" onclick="document.getElementById('modalViewOverlay').classList.remove('show')">&times;</button>
+            </div>
+            <div class="modal-body" id="modalViewContent"></div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="document.getElementById('modalViewOverlay').classList.remove('show')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Versão: V1.0.0 • © Desenvolvido por Seteg - Soluções Geológicas e Ambientais • 2026</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
