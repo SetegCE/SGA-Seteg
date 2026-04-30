@@ -37,7 +37,6 @@ function toggleFormulario() {
     if (formAberto) {
         container.classList.remove('hidden');
         container.classList.add('active');
-        document.body.classList.add('form-open');
         if (btn) {
             btn.innerHTML = '<i class="fas fa-times"></i> Cancelar';
             btn.classList.remove('btn-primary');
@@ -48,7 +47,6 @@ function toggleFormulario() {
     } else {
         container.classList.remove('active');
         container.classList.add('hidden');
-        document.body.classList.remove('form-open');
         if (btn) {
             btn.innerHTML = '<i class="fas fa-plus"></i> Nova Solicitação';
             btn.classList.remove('btn-ghost');
@@ -187,11 +185,12 @@ async function carregarDados() {
 
         if (error) throw error;
         dadosTabela = data || [];
-        console.log('Dados carregados:', dadosTabela.length);
+        console.log('✅ Dados carregados:', dadosTabela.length);
         renderizarTabela();
         atualizarMetricas();
     } catch (e) {
-        console.error('Erro ao carregar:', e);
+        console.error('❌ Erro ao carregar:', e);
+        mostrarToast('Erro ao carregar dados', 'error');
     } finally {
         carregandoDados = false;
     }
@@ -558,41 +557,80 @@ async function salvarSolicitacao(e) {
     }
 }
 
+// ✅ FUNÇÃO CORRIGIDA - MUDAR STATUS
 async function mudarStatus(id, novoStatus) {
-    if (!usuarioLogado) return;
-    const item = dadosTabela.find(d => d.id === id);
-    if (item) {
-        item.status = novoStatus;
+    if (!usuarioLogado) {
+        mostrarToast('Faça login como gestor', 'error');
+        return;
+    }
+    
+    console.log('🔄 Tentando mudar status:', { id, novoStatus });
+    
+    try {
+        // Atualiza no banco de dados PRIMEIRO
+        const { data, error } = await appSupabase
+            .from('solicitacoes')
+            .update({ 
+                status: novoStatus, 
+                atualizado_em: new Date().toISOString() 
+            })
+            .eq('id', id)
+            .select(); // Retorna os dados atualizados
+        
+        if (error) {
+            console.error('❌ Erro ao atualizar status:', error);
+            throw error;
+        }
+        
+        console.log('✅ Status atualizado no banco:', data);
+        
+        // Atualiza o array local
+        const index = dadosTabela.findIndex(d => d.id === id);
+        if (index !== -1) {
+            dadosTabela[index].status = novoStatus;
+            if (data && data[0]) {
+                dadosTabela[index] = { ...dadosTabela[index], ...data[0] };
+            }
+        }
+        
+        // Atualiza a interface
         renderizarTabela();
         atualizarMetricas();
-    }
-    try {
-        await appSupabase.from('solicitacoes')
-            .update({ status: novoStatus, atualizado_em: new Date().toISOString() })
-            .eq('id', id);
+        
+        mostrarToast('Status atualizado com sucesso!', 'success');
+        
     } catch (err) {
-        console.error(err);
-        mostrarToast('Erro ao sincronizar status', 'error');
-        carregarDados();
+        console.error('❌ Erro em mudarStatus:', err);
+        mostrarToast('Erro ao atualizar status: ' + err.message, 'error');
+        // Recarrega os dados do banco em caso de erro
+        await carregarDados();
     }
 }
 
 async function excluirSolicitacao(id) {
     if (!usuarioLogado) return;
     if (!confirm('Excluir esta solicitação?')) return;
-    const index = dadosTabela.findIndex(d => d.id === id);
-    if (index !== -1) {
-        dadosTabela.splice(index, 1);
-        renderizarTabela();
-        atualizarMetricas();
-    }
+    
     try {
-        await appSupabase.from('solicitacoes').delete().eq('id', id);
+        const { error } = await appSupabase
+            .from('solicitacoes')
+            .delete()
+            .eq('id', id);
+            
+        if (error) throw error;
+        
+        const index = dadosTabela.findIndex(d => d.id === id);
+        if (index !== -1) {
+            dadosTabela.splice(index, 1);
+            renderizarTabela();
+            atualizarMetricas();
+        }
+        
         mostrarToast('Excluído com sucesso', 'success');
     } catch (err) {
         console.error(err);
         mostrarToast('Erro ao excluir do servidor', 'error');
-        carregarDados();
+        await carregarDados();
     }
 }
 
